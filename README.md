@@ -2,6 +2,10 @@
 [![Language](https://img.shields.io/github/languages/top/abbruzze/zx)]()
 [![Downloads](https://img.shields.io/github/downloads/abbruzze/zx/total)](https://github.com/abbruzze/zx/releases/latest)
 
+<p align="center">
+  <img src="https://github.com/abbruzze/zx/blob/main/images/zx_big_logo.png">
+</p>
+
 ZX Spectrum computers Scala emulator ver 1.0
 ========
 
