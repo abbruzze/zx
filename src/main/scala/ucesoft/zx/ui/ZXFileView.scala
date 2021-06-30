@@ -15,7 +15,8 @@ object ZXFileView extends FileView {
       name.endsWith(".TAP") ||
       name.endsWith(".MDR") ||
       name.endsWith(".SCR") ||
-      name.endsWith(".TZX")) icon
+      name.endsWith(".TZX") ||
+      name.endsWith(".WAV")) icon
     else null
   }
 }

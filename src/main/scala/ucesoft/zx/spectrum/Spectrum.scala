@@ -19,7 +19,7 @@ class Spectrum(errorHandler: Throwable => Unit) extends ZXComponent {
   protected val CONFIGURATION_FILENAME = "ZX.config"
 
   // PREFERENCES ===============================================================
-  implicit val preferences = new Preferences
+  val preferences = new Preferences
   val configuration = new Properties()
   private[this] var _configurationFile : File = _
   // COMPONENTS ================================================================
@@ -29,7 +29,7 @@ class Spectrum(errorHandler: Throwable => Unit) extends ZXComponent {
   val joystick = new JoystickBridge
   val speaker = new Speaker(44100,100)
   val ay = new AY38912(44100,500)
-  val mmu = new MMU(keyboard,speaker,ay,joystick,tape)
+  val mmu = new MMU(keyboard,speaker,ay,joystick,tape)(preferences)
   val z80 = new Z80(mmu,mmu)
   val ula = new ULA(mmu,irqHandler _)
   // MODEL =====================================================================

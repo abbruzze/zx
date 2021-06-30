@@ -1,11 +1,11 @@
 package ucesoft.zx.ui
 
 import com.formdev.flatlaf.FlatLightLaf
-import ucesoft.zx.audio.{AY8912Mode}
+import ucesoft.zx.audio.AY8912Mode
 import ucesoft.zx.format.{MDR, SnapshotFileFormat, TAP, TZX}
-import ucesoft.zx.gpu.{Display}
+import ucesoft.zx.gpu.Display
 import ucesoft.zx.joystick.{KempstonJoystickWithKeyboard, KempstonJoystickWithUSB}
-import ucesoft.zx.misc.{FullScreenMode, MouseCage, Preferences, ScaledImageIcon}
+import ucesoft.zx.misc.{DisplayEffectPanel, FullScreenMode, GIFPanel, MouseCage, Preferences, ScaledImageIcon}
 import ucesoft.zx.{ClockEvent, Log, Model, Version}
 import ucesoft.zx.spectrum.Spectrum
 import ucesoft.zx.tape.{TAPE_PLAY, TAPE_STOP, TapeListener, TapeState}
@@ -14,7 +14,7 @@ import ucesoft.zx.ui.control.{ControlPanel, VideoControl}
 
 import java.awt.{Dimension, FlowLayout}
 import java.awt.event.{WindowAdapter, WindowEvent}
-import java.io.{File}
+import java.io.File
 import javax.imageio.ImageIO
 import javax.swing.border.BevelBorder
 import javax.swing.{BorderFactory, ImageIcon, JCheckBoxMenuItem, JDialog, JFileChooser, JFrame, JMenu, JMenuBar, JMenuItem, JOptionPane, JPanel, KeyStroke, UIManager}
@@ -40,6 +40,7 @@ class ZX extends SwingAware with VideoControl {
   private[this] var lastDirectory : String = _
   private[this] var tapeWarpMode = true
   private[this] var controlPanelDialog : JDialog = _
+  private[this] var gifRecorder : JDialog = _
   // ====================================================
   protected var warpModeItem : JCheckBoxMenuItem = _
   protected var traceItem : JCheckBoxMenuItem = _
@@ -119,6 +120,9 @@ class ZX extends SwingAware with VideoControl {
 
     // Display zoom
     zoomDisplay(2)
+
+    // GIF Recorder
+    gifRecorder = GIFPanel.createGIFPanel(frame,Array(display),Array("Screen"))
   }
 
   def configure(args: Array[String]) : Unit = {
@@ -245,7 +249,7 @@ class ZX extends SwingAware with VideoControl {
     val clip = spectrum.ula.getClip
     val height = clip.y2 - clip.y1
     val width = clip.x2 - clip.x1
-    FullScreenMode.goFullScreen(frame,display,width,height,null,spectrum.keyboard)
+    FullScreenMode.goFullScreen(frame,display,width,height,null,spectrum.keyboard,kempJoyKeyb)
   }
 
   override def zoomDisplay(factor:Int) : Unit = {
@@ -407,8 +411,21 @@ class ZX extends SwingAware with VideoControl {
   }
 
   protected def buildOptionsMenu(optionMenu:JMenu) : Unit = {
+    warpModeItem = new JCheckBoxMenuItem("Warp mode")
+    warpModeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W,java.awt.event.InputEvent.ALT_DOWN_MASK))
+    warpModeItem.setSelected(spectrum.clk.maximumSpeed)
+    warpModeItem.addActionListener(_ => spectrum.setWarpMode(warpModeItem.isSelected) )
+    optionMenu.add(warpModeItem)
+
+    mouseEnabledItem = new JCheckBoxMenuItem("Mouse Interface I enabled")
+    mouseEnabledItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M,java.awt.event.InputEvent.ALT_DOWN_MASK))
+    mouseEnabledItem.addActionListener(_ => enableMouse(mouseEnabledItem.isSelected) )
+    optionMenu.add(mouseEnabledItem)
+
+    optionMenu.addSeparator()
+
     val fullScreenItem = new JMenuItem("Full screen ...")
-    fullScreenItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F,java.awt.event.InputEvent.ALT_DOWN_MASK))
+    fullScreenItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER,java.awt.event.InputEvent.ALT_DOWN_MASK))
     fullScreenItem.addActionListener(_ => fullScreen )
     optionMenu.add(fullScreenItem)
 
@@ -427,17 +444,20 @@ class ZX extends SwingAware with VideoControl {
     zoom3.addActionListener(_ => zoomDisplay(3) )
     zoom.add(zoom3)
 
-    warpModeItem = new JCheckBoxMenuItem("Warp mode")
-    warpModeItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W,java.awt.event.InputEvent.ALT_DOWN_MASK))
-    warpModeItem.setSelected(spectrum.clk.maximumSpeed)
-    warpModeItem.addActionListener(_ => spectrum.setWarpMode(warpModeItem.isSelected) )
-    optionMenu.add(warpModeItem)
+    val gifRecorderItem = new JMenuItem("GIF Recorder ...")
+    gifRecorderItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_G,java.awt.event.InputEvent.ALT_DOWN_MASK))
+    gifRecorderItem.addActionListener(_ => gifRecorder.setVisible(true))
+    optionMenu.add(gifRecorderItem)
 
-    mouseEnabledItem = new JCheckBoxMenuItem("Mouse Interface I enabled")
-    mouseEnabledItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_M,java.awt.event.InputEvent.ALT_DOWN_MASK))
-    mouseEnabledItem.addActionListener(_ => enableMouse(mouseEnabledItem.isSelected) )
-    optionMenu.add(mouseEnabledItem)
+    val snapshotItem = new JMenuItem("Take a snapshot...")
+    snapshotItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S,java.awt.event.InputEvent.ALT_DOWN_MASK))
+    snapshotItem.addActionListener(_ => takeSnapshot )
+    optionMenu.add(snapshotItem)
 
+    val effectsItem = new JMenuItem("Display effects...")
+    effectsItem.addActionListener(_ => DisplayEffectPanel.createDisplayEffectPanel(frame,display,"Screen").setVisible(true) )
+    effectsItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_E,java.awt.event.InputEvent.ALT_DOWN_MASK))
+    optionMenu.add(effectsItem)
   }
 
   protected def buildTraceMenu(traceMenu:JMenu) : Unit = {
@@ -478,7 +498,7 @@ class ZX extends SwingAware with VideoControl {
   protected def handleDND(file:File) : Unit = {
     val name = file.getName.toUpperCase()
 
-    if (name.endsWith(".TAP") || name.endsWith(".TZX")) {
+    if (name.endsWith(".TAP") || name.endsWith(".TZX") || name.endsWith(".WAV")) {
       val clk = spectrum.clk
       clk.pause
       spectrum.resetComponent
@@ -666,7 +686,10 @@ class ZX extends SwingAware with VideoControl {
           fc.setFileView(ZXFileView)
           if (lastDirectory != null) fc.setCurrentDirectory(new File(lastDirectory))
           fc.setFileFilter(new javax.swing.filechooser.FileFilter {
-            def accept(f:File) = f.isDirectory || f.getName.toUpperCase.endsWith(".TAP") || f.getName.toUpperCase.endsWith(".TZX")
+            def accept(f:File) = f.isDirectory ||
+                                          f.getName.toUpperCase.endsWith(".TAP") ||
+                                          f.getName.toUpperCase.endsWith(".TZX") ||
+                                          f.getName.toUpperCase.endsWith(".WAV")
             def getDescription = s"ZX tape image"
           })
           fc.showOpenDialog(frame) match {
@@ -687,6 +710,14 @@ class ZX extends SwingAware with VideoControl {
               case None =>
                 throw new IllegalArgumentException("Can't read tap format")
             }
+          }
+          else
+          if (tape.toUpperCase.endsWith(".WAV")) {
+              TZX.WAV2TZX(tape) match {
+                case Some(tp) => tp
+                case None =>
+                  throw new IllegalArgumentException("Can't read wav format")
+              }
           }
           else {
             TZX.readTZX(tape) match {
@@ -713,5 +744,15 @@ class ZX extends SwingAware with VideoControl {
   private def enableMouse(enabled: Boolean) : Unit = {
     if (enabled) MouseCage.enableMouseCageOn(display) else MouseCage.disableMouseCage
     spectrum.mmu.mouseEnabled = enabled
+  }
+
+  private def takeSnapshot  : Unit = {
+    val fc = new JFileChooser
+    fc.showSaveDialog(frame) match {
+      case JFileChooser.APPROVE_OPTION =>
+        val file = if (fc.getSelectedFile.getName.toUpperCase.endsWith(".PNG")) fc.getSelectedFile else new File(fc.getSelectedFile.toString + ".png")
+        display.saveSnapshot(file)
+      case _ =>
+    }
   }
 }

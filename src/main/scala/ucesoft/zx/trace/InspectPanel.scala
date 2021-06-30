@@ -49,7 +49,7 @@ private[trace] class InspectPanel(root: ZXComponent) extends JPanel with Runnabl
   private[this] val lock = new Object
   private[this] val tree = new JTree(treeRoot)
   private[this] val spin = new JSpinner
-  private[this] var visible = false
+  private[this] var _visible = false
   private[this] var sleepPeriod = 1000
 
   spin.setValue(sleepPeriod)
@@ -122,9 +122,9 @@ private[trace] class InspectPanel(root: ZXComponent) extends JPanel with Runnabl
   }
 
   def enableUpdating(enabled: Boolean) : Unit = {
-    visible = enabled
+    _visible = enabled
     if (enabled) lock.synchronized {
-      lock.notify
+      lock.notify()
     }
   }
 
@@ -134,8 +134,8 @@ private[trace] class InspectPanel(root: ZXComponent) extends JPanel with Runnabl
 
   def run : Unit = {
     while (true) {
-      if (!visible) lock.synchronized {
-        while (!visible) lock.wait
+      if (!_visible) lock.synchronized {
+        while (!_visible) lock.wait()
       }
       Thread.sleep(sleepPeriod)
       SwingUtilities.invokeLater(new Runnable {

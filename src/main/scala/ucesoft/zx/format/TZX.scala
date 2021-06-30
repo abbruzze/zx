@@ -7,6 +7,7 @@ import ucesoft.zx.tape.TapeBlockInfo
 
 import java.io.{ByteArrayOutputStream, File, InputStream, OutputStream}
 import java.util.zip.{DeflaterOutputStream, InflaterInputStream}
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object TZX {
@@ -60,6 +61,16 @@ object TZX {
     TZXBlocks(blocks.toArray,file)
   }
 
+  def WAV2TZX(file:String) : Option[TZXBlocks] = {
+    WAV.readWAV(file) match {
+      case None =>
+        None
+      case Some(wav) =>
+        val block = new WAVBlock(wav)
+        Some(TZXBlocks(Array(block),Some(new File(file))))
+    }
+  }
+
   private def createBlockForID(id:Int,index:Int,durationOffsetInSeconds : Int) : TapeBlock = {
     id match {
       case 0x10 => new ID10_StandardSpeedData(index,durationOffsetInSeconds)
@@ -72,13 +83,15 @@ object TZX {
       case 0x20 => new ID20_Pause(index,durationOffsetInSeconds)
       case 0x21 => new ID21_GroupStart(index,durationOffsetInSeconds)
       case 0x22 => new ID22_GroupEnd(index,durationOffsetInSeconds)
+      case 0x23 => new ID23_JumpToBlock(index,durationOffsetInSeconds)
       case 0x24 => new ID24_LoopStart(index,durationOffsetInSeconds)
       case 0x25 => new ID25_LoopEnd(index,durationOffsetInSeconds)
       case 0x2A => new ID2A_StopTheTape48K(index,durationOffsetInSeconds)
       case 0x30 => new ID30_Text(index,durationOffsetInSeconds)
       case 0x32 => new ID32_ArchiveInfo(index,durationOffsetInSeconds)
+      case 0x35 => new ID35_CustomInfo(index,durationOffsetInSeconds)
       case x =>
-        throw new IllegalArgumentException(s"TZX Block ID $x not supported")
+        throw new IllegalArgumentException(s"TZX Block ID ${x.toHexString} not supported")
     }
   }
 
@@ -190,6 +203,37 @@ object TZX {
 
     def toBytes : Array[Byte] = getBytes
     protected def getBytes : Array[Byte] = Array.ofDim[Byte](0)
+  }
+
+  private class WAVBlock(wav:WAV) extends TapeBlock(1,0) {
+    override val ID: Int = 0x100
+    override val blockType: String = "WAV"
+    private final val CYCLES = (3500000.0 / wav.sampleRate).toInt
+    private var cycles = 0
+
+    durationInSeconds = wav.getDurationInSeconds
+
+    override def reset: Unit = {
+      wav.reset()
+      cycles = 0
+    }
+
+    override def cycle(ctx: Context): Unit = {
+      cycles += 1
+      if (cycles > CYCLES) {
+        cycles = 0
+        wav.read match {
+          case None =>
+            ctx.stopTheTape
+          case Some(v) =>
+            ctx.setPulse(if (v) 0x40 else 0)
+        }
+      }
+    }
+
+    override protected def parseBlock(buffer: Array[Int], parseProps: mutable.HashMap[String, Any]): Boolean = true
+
+    override def blockInfo: String = ""
   }
 
   private abstract class TAPBlock(override val index : Int,override val durationOffsetInSeconds : Int) extends TapeBlock(index,durationOffsetInSeconds) {
@@ -750,7 +794,6 @@ object TZX {
     override val ID: Int = 0x18
 
     private[this] var lastEar = 0
-    private[this] var sample = 0
     private[this] var recBuffer : collection.mutable.ListBuffer[Byte] = _
     private[this] var samplingRate = 0
     private[this] var gt0xff = 0
@@ -869,5 +912,41 @@ object TZX {
     override def fastLoad(ctx:Context,ram: Memory, z80: Z80): Boolean = false
 
     override protected def calculateCycles: Unit = durationInCycles = cyclesPerSample * samples.sum
+  }
+
+  class ID35_CustomInfo(override val index : Int,override val durationOffsetInSeconds : Int) extends TapeBlock(index,durationOffsetInSeconds) {
+    override val blockType: String = "Custom info"
+    override def blockInfo: String = ""
+    override val ID: Int = 0x35
+
+    private var idString = ""
+
+    override protected def parseBlock(buffer: Array[Int],parseProps:collection.mutable.HashMap[String,Any]): Boolean = {
+      val sb = new StringBuilder
+      for(i <- 0 to 9) sb.append(readByte(buffer).toChar)
+      idString = sb.toString
+      val len = readWord(buffer) | readWord(buffer) << 16
+      parsePos += len
+      true
+    }
+    override def cycle(ctx: Context): Unit = {
+      ctx.nextIndex
+    }
+  }
+
+  class ID23_JumpToBlock(override val index : Int,override val durationOffsetInSeconds : Int) extends TapeBlock(index,durationOffsetInSeconds) {
+    override val blockType: String = "Jump to block"
+    override def blockInfo: String = s"$block"
+    override val ID: Int = 0x23
+
+    private var block = 0
+
+    override protected def parseBlock(buffer: Array[Int],parseProps:collection.mutable.HashMap[String,Any]): Boolean = {
+      block = readWord(buffer).toShort + index - 1
+      true
+    }
+    override def cycle(ctx: Context): Unit = {
+      ctx.index = block
+    }
   }
 }

@@ -122,7 +122,7 @@ class Clock private (errorHandler:Option[(Throwable) => Unit],name:String,autoTi
         if (suspended) {
           while (suspended) suspendedLock.synchronized {
             suspendedConfim = true
-            suspendedLock.wait
+            suspendedLock.wait()
           }
         }
 
@@ -222,7 +222,7 @@ class Clock private (errorHandler:Option[(Throwable) => Unit],name:String,autoTi
   def play = suspendedLock.synchronized {
     suspended = false
     suspendedConfim = false
-    suspendedLock.notify
+    suspendedLock.notify()
   }
   def halt = running = false
   def printEvents  : Unit = { println(if (events != null) events else "No events") }

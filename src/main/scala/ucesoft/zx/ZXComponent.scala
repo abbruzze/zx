@@ -145,11 +145,11 @@ trait ZXComponent {
   }
 
   protected def getActiveFrame : Option[Frame] = {
-    Frame.getFrames filter { _.isActive } headOption match {
+    Frame.getFrames.filter(_.isActive).headOption match {
       case f@Some(_) =>
         f
       case None =>
-        Frame.getFrames filter { _.isVisible } headOption
+        Frame.getFrames.filter(_.isVisible ).headOption
     }
   }
 

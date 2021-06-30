@@ -74,7 +74,6 @@ class JoystickKeysPanel(pref:Preferences) extends JPanel {
         removeKeyListener(this)
         setLabel(label,Some(e.getKeyCode))
         pref.update[Int](key,e.getKeyCode)
-        println(pref.get[Int](key))
       }
     })
   }

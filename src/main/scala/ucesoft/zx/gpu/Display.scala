@@ -67,7 +67,7 @@ class Display(width: Int, height: Int, title: String, frame: JFrame, clk:Clock =
   }
 
   def advanceOneFrame : Unit = singleFrameModeMonitor.synchronized {
-    singleFrameModeMonitor.notifyAll
+    singleFrameModeMonitor.notifyAll()
   }
 
   def setRotationAngle(angleInDeg:Double) : Unit = {
@@ -268,7 +268,7 @@ class Display(width: Int, height: Int, title: String, frame: JFrame, clk:Clock =
       singleFrameCounter += 1
       frame.setTitle(s"$title - single frame mode ($singleFrameCounter)")
       singleFrameModeMonitor.synchronized {
-        singleFrameModeMonitor.wait
+        singleFrameModeMonitor.wait()
       }
     }
     else {

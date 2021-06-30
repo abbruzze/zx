@@ -5,7 +5,7 @@ import java.awt.datatransfer.DataFlavor
 import java.io.File
 
 class DNDHandler(handleDND:File => Unit) extends TransferHandler {
-  private final val SUPPORTED_FORMATS = List(".SNA",".Z80",".SCR",".TAP",".TZX",".MDR")
+  private final val SUPPORTED_FORMATS = List(".SNA",".Z80",".SCR",".TAP",".TZX",".MDR",".WAV")
   override def canImport(support:TransferHandler.TransferSupport) : Boolean = support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
 
   override def importData(support: TransferHandler.TransferSupport) : Boolean = {
