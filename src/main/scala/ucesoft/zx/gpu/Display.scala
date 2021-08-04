@@ -249,7 +249,6 @@ class Display(width: Int, height: Int, title: String, frame: JFrame, clk:Clock =
     }
     else if (drawRasterLine || mouseZoomEnabled) repaint()
 
-    displayImage.newPixels()
     repaint()
 
     if (waitFrameAndSaveSnapshotFile != null) {
