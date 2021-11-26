@@ -188,12 +188,8 @@ class ZX extends SwingAware with VideoControl {
     pref.add(Preferences._128K_PLUS3_2_ROM_PREF,"128K+3 ROM2 path","") { _ => }
     pref.add(Preferences._128K_PLUS3_3_ROM_PREF,"128K+3 ROM3 path","") { _ => }
     pref.add(Preferences.IFI_ROM_PREF,"Interface I ROM path","") { _ => }
-    // General
-    pref.add(Preferences.LEC,"enables/disables LEC memory expansion",false) { enabled => spectrum.mmu.setLecEnabled(enabled) }
     // LEC
-
-
-    spectrum.preferences.parseAndLoad(args,spectrum.configuration)
+    pref.add(Preferences.LEC,"enables/disables LEC memory expansion",false) { enabled => spectrum.mmu.setLecEnabled(enabled) }
 
     pref.parseAndLoad(args,spectrum.configuration)
 
