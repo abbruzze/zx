@@ -10,6 +10,9 @@
 ZX Spectrum computers Scala emulator ver 1.0
 ========
 
+![](https://github.com/abbruzze/zx/blob/main/images/_48k.PNG)![](https://github.com/abbruzze/zx/blob/main/images/_128k.PNG)
+![](https://github.com/abbruzze/zx/blob/main/images/arkanoid.PNG)![](https://github.com/abbruzze/zx/blob/main/images/rtype.PNG)
+
 ### Emulator spec.
 - Z80 accurate emulation (memptr included)
 - Contended memory
