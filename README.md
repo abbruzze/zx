@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/abbruzze/zx.svg?branch=main)](https://travis-ci.com/abbruzze/zx)
+[![Build Status](https://app.travis-ci.com/abbruzze/zx.svg?branch=main)](https://app.travis-ci.com/abbruzze/zx)
 [![Release](https://img.shields.io/github/v/release/abbruzze/zx)](https://github.com/abbruzze/zx/releases)
 [![Language](https://img.shields.io/github/languages/top/abbruzze/zx)]()
 [![Downloads](https://img.shields.io/github/downloads/abbruzze/zx/total)](https://github.com/abbruzze/zx/releases/latest)
